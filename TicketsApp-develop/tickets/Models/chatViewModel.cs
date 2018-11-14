@@ -4,6 +4,7 @@ using System.Windows.Input;
 using Xamarin.Forms;
 using MvvmHelpers;
 using tickets.API;
+using System.Collections.Generic;
 
 namespace tickets.Models
 {
@@ -13,12 +14,12 @@ namespace tickets.Models
         public ICommand SendCommand { get; set; }
         private Server server = new Server();
         private string ticketID;
+        private chatTicket chatfile;
 
         public chatViewModel(string ticket)
         {
             this.ticketID = ticket;
             ListMessages = new ObservableRangeCollection<Message>();
-
             SendCommand = new Command(() =>
             {
                 if (!String.IsNullOrWhiteSpace(OutText))
@@ -26,20 +27,24 @@ namespace tickets.Models
                     var message = new Message
                     {
                         Text = OutText,
+                        Files = chatfile.Files,
                         IsTextIn = false,
+                        IsAdjIn = false,
                         MessageDateTime = DateTime.Now
                     };
+                    
+                    
                     sendMessage(message);
                     //ListMessages.Add(message);
                     //OutText = "";
                 }
-
+                  
             });
             
         }
         public async void sendMessage(Message message)
         {
-            string status = await server.replyTicket(message.Text, this.ticketID);
+            string status = await server.replyTicket(message.Text,message.Files, this.ticketID);
             if(status.Equals("ok"))
             {
                 ListMessages.Add(message);
@@ -59,5 +64,8 @@ namespace tickets.Models
             set { SetProperty(ref _outText, value); }
         }
         string _outText = string.Empty;
+
+
     }
+    
 }

@@ -15,7 +15,13 @@ namespace tickets.Models
             set { SetProperty(ref _text, value); }
         }
         string _text;
+        public List<(string, byte[])> Files
+        {
+            get { return _files; }
+            set { SetProperty(ref _files, value); }
 
+        }
+        List<(string, byte[])> _files;
         public DateTime MessageDateTime
         {
             get { return _messageDateTime; }
@@ -32,5 +38,11 @@ namespace tickets.Models
             set { SetProperty(ref _isTextIn, value); }
         }
         bool _isTextIn;
+        public bool IsAdjIn
+        {
+            get { return _isAdjIn; }
+            set { SetProperty(ref _isAdjIn, value); }
+        }
+        bool _isAdjIn;
     }
 }

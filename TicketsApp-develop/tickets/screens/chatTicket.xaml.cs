@@ -7,6 +7,10 @@ using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 using tickets.API;
 using tickets.Models;
+using System.IO;
+using Plugin.Media;
+using Plugin.FilePicker;
+using Plugin.FilePicker.Abstractions;
 
 namespace tickets
 {
@@ -14,13 +18,154 @@ namespace tickets
 	public partial class chatTicket : ContentPage
 	{
         private Server server = new Server();
+        private List<(string, byte[])> files = new List<(string, byte[])>();
         public string ticketID = null;
         private string messageRef = "<p><b>Mensaje:</b></p>";
         private string autorRef = "<td class=\"tickettd\">";
 
         private chatViewModel chatVM;
 
-        public chatTicket ()
+        public List<(string, byte[])> Files { get => files; set => files = value; }
+
+        public chatTicket()
+        {
+           
+            InitializeComponent();
+            //Append.Clicked += searchFile;
+            chatVM = new chatViewModel(ticketID);
+
+            
+
+            chatVM.ListMessages.CollectionChanged += (sender, e) =>
+            {
+                var target = chatVM.ListMessages[chatVM.ListMessages.Count - 1];
+                MessagesListView.ScrollTo(target, ScrollToPosition.End, true);
+            };
+        }
+
+        private async void take_Photo(object sender, EventArgs args)
+        {
+            await CrossMedia.Current.Initialize();
+
+            if (!CrossMedia.Current.IsCameraAvailable || !CrossMedia.Current.IsTakePhotoSupported)
+            {
+                DisplayAlert("No Camera", ":( No camera available.", "OK");
+                return;
+            }
+
+            var file = await CrossMedia.Current.TakePhotoAsync(new Plugin.Media.Abstractions.StoreCameraMediaOptions
+            {
+                Directory = "photo",
+                Name = "photo" + Files.Count + ".jpg",
+                CompressionQuality = 25
+
+
+            });
+
+            if (file == null)
+                return;
+            string filePath = file.Path;
+            byte[] data = MediaFileBytes(file);
+
+            Files.Add(("photo" + Files.Count + ".jpg", data));
+            string temp = "";
+            for (int i = 0; i < Files.Count(); i++)
+            {
+                temp += Files[i].Item1;
+                temp += "\n";
+            }
+            Adjun.Text = temp;
+            //await DisplayAlert("File Location", filePath, "OK");
+        }
+
+        /*            take_photo.Clicked += async (sender, args) =>
+                    { 
+                        await CrossMedia.Current.Initialize();
+
+                        if (!CrossMedia.Current.IsCameraAvailable || !CrossMedia.Current.IsTakePhotoSupported)
+                        {
+                            DisplayAlert("No Camera", ":( No camera available.", "OK");
+                            return;
+                        }
+
+                        var file = await CrossMedia.Current.TakePhotoAsync(new Plugin.Media.Abstractions.StoreCameraMediaOptions
+                        {
+                            Directory = "photo",
+                            Name = "photo" + files.Count + ".jpg",
+                            CompressionQuality = 25
+
+
+                        });
+
+                        if (file == null)
+                            return;
+                        string filePath = file.Path;
+                        byte[] data = MediaFileBytes(file);
+
+                        files.Add(("photo" + files.Count + ".jpg", data));
+                        string temp = "";
+                        for (int i = 0; i < files.Count(); i++)
+                        {
+                            temp += files[i].Item1;
+                            temp += "\n";
+                        }
+                        Adjun.Text = temp;
+                        await DisplayAlert("File Location", filePath, "OK");
+                    };
+
+                    chatVM.ListMessages.CollectionChanged += (sender, e) =>
+                    {
+                        var target = chatVM.ListMessages[chatVM.ListMessages.Count - 1];
+                        MessagesListView.ScrollTo(target, ScrollToPosition.End, true);
+                    };
+
+                }
+                */
+
+
+        byte[] MediaFileBytes(Plugin.Media.Abstractions.MediaFile file)
+        {
+            using (var memoryStream = new MemoryStream())
+            {
+                file.GetStream().CopyTo(memoryStream);
+                file.Dispose();
+                return memoryStream.ToArray();
+            }
+        }
+
+        private async void searchFile(object sender, EventArgs e)
+        {
+            try
+            {
+                FileData file = await CrossFilePicker.Current.PickFile();
+                if (file != null)
+                {
+                    string name = file.FileName;
+                    var data = file.DataArray;
+                    Files.Add((name, data));
+                    //loadFiles.Add(file);
+                    //Adjun.ItemsSource = null;
+                    string temp = "";
+                    for (int i = 0; i < Files.Count(); i++)
+                    {
+                        temp += Files[i].Item1;
+                        temp += "\n";
+                    }
+                    Adjun.Text = temp;
+                }
+                else
+                {
+                    await DisplayAlert("Advertencia", "No es posible acceder a los datos del archivo", "OK");
+
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Console.WriteLine("Exception choosing file: " + ex.ToString());
+                await DisplayAlert("Aviso", "Se produjo un error", "OK");
+            }
+        }
+        /*public chatTicket ()
 		{
 			InitializeComponent ();
             chatVM = new chatViewModel(ticketID);
@@ -30,8 +175,7 @@ namespace tickets
                 MessagesListView.ScrollTo(target, ScrollToPosition.End, true);
             };
 
-        }
-
+        }*/
         protected override async void OnAppearing()
         {
             try
@@ -41,7 +185,9 @@ namespace tickets
                     Title = "Ticket No. " + ticketID;
                 }
                 BindingContext = chatVM = new chatViewModel(ticketID);
-                readTicket();  
+                
+                readTicket();
+                
             }
             catch (Exception ex)
             {                
@@ -56,6 +202,8 @@ namespace tickets
             Loading.IsEnabled = false;
             string autor = "";
             string message = "";
+            List<(string, byte[])> files = new List<(string, byte[])> {};
+
             string myName = null;
             int position = html.IndexOf(autorRef + "N");
             int index = position + autorRef.Count();
@@ -163,5 +311,8 @@ namespace tickets
             }
             return Mimessage;
         }
-    }
+
+
+}
+    
 }
